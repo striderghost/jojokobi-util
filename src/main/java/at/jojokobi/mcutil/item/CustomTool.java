@@ -1,6 +1,7 @@
 package at.jojokobi.mcutil.item;
 
 import java.util.Arrays;
+import java.util.Random;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -20,7 +21,7 @@ public abstract class CustomTool extends CustomItem{
 
 	public static final String DURABILITY_TAG = "durability";
 	
-	private int maxDurability = 0;
+	private int maxDurability = 200;
 	private Material repairMaterial = null;
 	
 	private final NamespacedKey durabilityKey;
@@ -33,7 +34,7 @@ public abstract class CustomTool extends CustomItem{
 	@Override
 	public ItemStack createItem() {
 		ItemStack item = super.createItem();
-		setDurability(item, maxDurability);
+		setDurability(item, new Random().nextInt((maxDurability - 20) + 1) + 20);
 		return item;
 	}
 	

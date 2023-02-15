@@ -1,6 +1,8 @@
 package at.jojokobi.mcutil.item;
 
+import java.util.Arrays;
 import java.util.UUID;
+import java.util.Random;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -9,6 +11,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.attribute.AttributeModifier.Operation;
 import org.bukkit.entity.Entity;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -18,6 +21,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType.SlotType;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -28,9 +32,12 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
+
 import at.jojokobi.mcutil.Identifiable;
 import at.jojokobi.mcutil.JojokobiUtilPlugin;
 import at.jojokobi.mcutil.NamespacedEntry;
+
+import org.bukkit.inventory.meta.Damageable;
 
 public abstract class CustomItem implements Listener, Identifiable {
 
@@ -43,7 +50,7 @@ public abstract class CustomItem implements Listener, Identifiable {
 	private short meta = 1;
 	private int damage = 0;
 	private double speed = 0;
-
+	private int maxDurability = 200;
 	private boolean helmet = false;
 
 	public static final String IDENTIFIER_TAG = "identifier";
@@ -72,7 +79,8 @@ public abstract class CustomItem implements Listener, Identifiable {
 		ItemMeta meta = item.getItemMeta();
 		meta.setCustomModelData((int) this.meta);
 		meta.setDisplayName(name);
-		meta.setUnbreakable(true);
+		meta.setUnbreakable(false);
+		setDurability(item, new Random().nextInt((maxDurability - 20) + 1) + 20);
 		if (hideFlags) {
 			meta.addItemFlags(ItemFlag.values());
 		}
@@ -84,8 +92,8 @@ public abstract class CustomItem implements Listener, Identifiable {
 		// Set meta
 		setItemDataString(meta, identifierKey, getIdentifier());
 		setItemDataString(meta, namespaceKey, getNamespace());
-		
 		item.setItemMeta(meta);
+
 		// Identifier and namespace
 //		ItemUtil.setNBTString(item, NAMESPACE_TAG, getNamespace());
 //		ItemUtil.setNBTString(item, IDENTIFIER_TAG, getIdentifier());
@@ -117,6 +125,13 @@ public abstract class CustomItem implements Listener, Identifiable {
 //		nmsItem.setTag(root);
 //		item.setItemMeta(CraftItemStack.getItemMeta(nmsItem));
 		return item;
+	}
+
+	public void setDurability (ItemStack item, int durability) {
+		ItemMeta meta = item.getItemMeta();
+		setItemDataInt(meta, createUtilKey("durability"), durability);
+		meta.setLore(Arrays.asList(durability + "/" + maxDurability));
+		item.setItemMeta(meta);
 	}
 
 	public boolean isItem(ItemStack item) {
@@ -175,9 +190,7 @@ public abstract class CustomItem implements Listener, Identifiable {
 
 	public abstract Recipe getRecipe();
 
-	public boolean onUse(ItemStack item, PlayerInteractEvent event) {
-		return onUse(item, event.getPlayer());
-	}
+	public boolean onUse(ItemStack item, PlayerInteractEvent event) {return onUse(item, event.getPlayer());}
 
 	public void onHit(ItemStack item, EntityDamageByEntityEvent event) {
 		onHit(item, event.getDamager(), event.getEntity());
@@ -266,6 +279,21 @@ public abstract class CustomItem implements Listener, Identifiable {
 			ItemStack item = ((LivingEntity) event.getDamager()).getEquipment().getItemInMainHand();
 			if (isItem(item)) {
 				onHit(item, event);
+			}
+		}
+	}
+
+	@EventHandler
+	public void onItemDamage(PlayerItemDamageEvent e) {
+		ItemStack item = e.getItem();
+		ItemMeta itemMeta = e.getItem().getItemMeta();
+		Damageable damageable = (Damageable) itemMeta;
+		if (damageable!=null) {
+			if (damageable.getDamage() >= item.getType().getMaxDurability()) {
+				item.setAmount(0);
+			} else {
+				damageable.setDamage(damageable.getDamage() + 1);
+				item.setItemMeta(itemMeta);
 			}
 		}
 	}
