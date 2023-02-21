@@ -1,13 +1,13 @@
 package at.jojokobi.mcutil.item;
 
 import java.util.Arrays;
-import java.util.Random;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
@@ -20,35 +20,35 @@ import org.bukkit.persistence.PersistentDataType;
 public abstract class CustomTool extends CustomItem{
 
 	public static final String DURABILITY_TAG = "durability";
-	
-	private int maxDurability = 200;
+
+	private int maxDurability = 0;
 	private Material repairMaterial = null;
-	
+
 	private final NamespacedKey durabilityKey;
-	
+
 	public CustomTool(String namespace, String identifier) {
 		super(namespace, identifier);
 		durabilityKey = createUtilKey(DURABILITY_TAG);
 	}
-	
+
 	@Override
 	public ItemStack createItem() {
 		ItemStack item = super.createItem();
-		setDurability(item, new Random().nextInt((maxDurability - 20) + 1) + 20);
+		setDurability(item, maxDurability);
 		return item;
 	}
-	
+
 	public void setDurability (ItemStack item, int durability) {
 		ItemMeta meta = item.getItemMeta();
 		setItemDataInt(meta, durabilityKey, durability);
 		meta.setLore(Arrays.asList(durability + "/" + maxDurability));
 		item.setItemMeta(meta);
 	}
-	
+
 	public int getDurability (ItemStack item) {
 		return item.getItemMeta().getPersistentDataContainer().get(durabilityKey, PersistentDataType.INTEGER);
 	}
-	
+
 	@Override
 	protected void fixItem(ItemStack item) {
 		super.fixItem(item);
@@ -56,7 +56,7 @@ public abstract class CustomTool extends CustomItem{
 		ItemUtil.removeNBTTag(item, DURABILITY_TAG);
 		setDurability(item, durability);
 	}
-	
+
 	@Override
 	public boolean onUse(ItemStack item, PlayerInteractEvent event) {
 		boolean used = useItem(item, event);
@@ -71,7 +71,7 @@ public abstract class CustomTool extends CustomItem{
 		}
 		return used;
 	}
-	
+
 	@Override
 	public void onHit(ItemStack item, EntityDamageByEntityEvent event) {
 		super.onHit(item, event);
@@ -85,17 +85,17 @@ public abstract class CustomTool extends CustomItem{
 			}
 		}
 	}
-	
+
 	@Override
 	public boolean onUse(ItemStack item, Player player) {
 		return false;
 	}
-	
+
 	@Override
 	public void onHit(ItemStack item, Entity damager, Entity defender) {
-		
+
 	}
-	
+
 	@EventHandler
 	public void onPrepareAnvil (PrepareAnvilEvent event) {
 		if (repairMaterial != null && isItem(event.getInventory().getItem(0)) && event.getInventory().getItem(1) != null && event.getInventory().getItem(1).getType() == repairMaterial) {
@@ -106,7 +106,7 @@ public abstract class CustomTool extends CustomItem{
 			event.setResult(result);
 		}
 	}
-	
+
 	@Override
 	@EventHandler
 	public void onInventoryClick(InventoryClickEvent event) {
@@ -118,17 +118,24 @@ public abstract class CustomTool extends CustomItem{
 			event.getInventory().remove(event.getClickedInventory().getItem(2));
 		}
 	}
-	
+
+	@EventHandler public void onBlockBreak(BlockBreakEvent event){
+		ItemStack item=event.getPlayer().getEquipment().getItemInMainHand();
+		if (isItem(item)){
+			event.setCancelled(true);
+		}
+	}
+
 	public boolean useItem (ItemStack item, PlayerInteractEvent event) {
 		return useItem(item, event.getPlayer());
 	}
-	
+
 	public boolean hit (ItemStack item, EntityDamageByEntityEvent event) {
 		return hit(item, event.getDamager(), event.getEntity());
 	}
-	
+
 	public abstract boolean useItem (ItemStack item, Player player);
-	
+
 	public abstract boolean hit (ItemStack item, Entity damager, Entity defender);
 
 	public int getMaxDurability() {
@@ -146,5 +153,5 @@ public abstract class CustomTool extends CustomItem{
 	public void setRepairMaterial(Material repairMaterial) {
 		this.repairMaterial = repairMaterial;
 	}
-	
+
 }
